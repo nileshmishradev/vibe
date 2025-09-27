@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 
-const page = () => {
-  return ( <div>
-    <p className="font-bold">hello world</p>
-    <Button variant="destructive">clickme</Button>
-  </div> );
+const Page = () => {
+  return (
+    <div>
+      <p className="font-bold">hello world</p>
+    <Button variant="destructive">click me</Button>
+    </div> 
+    
+   );
 }
  
-export default page;
+export default Page;
