@@ -1,36 +1,167 @@
-import { Agent, gemini, createAgent } from "@inngest/agent-kit";
-import {Sandbox} from "@e2b/code-interpreter"
-import {getSandbox} from "./utils"
+import { Agent, gemini, createAgent, createTool, createNetwork } from "@inngest/agent-kit";
+import { Sandbox } from "@e2b/code-interpreter";
+import { getSandbox, lastAssistantTextMessageContent } from "./utils";
 import { inngest } from "./client";
+import { PROMPT } from "@/trpc/prompt";
+import { z } from "zod";
 
 export const helloWorld = inngest.createFunction(
   { id: "hello-world" },
   { event: "test/hello.world" },
-  async ({ event ,step }) => {
+  async ({ event, step }) => {
 
     //
-    const sandboxId = await step.run("get-sandbox-id" , async () =>{
+    const sandboxId = await step.run("get-sandbox-id", async () => {
       const sandbox = await Sandbox.create("vibe-nextjs-learning");
       return sandbox.sandboxId;
-    })
-    
+    });
+
+    // Get sandbox URL
+    const sandboxUrl = await step.run("get-sandbox-url", async () => {
+      const sandbox = await getSandbox(sandboxId);
+      const host = sandbox.getHost(3000);
+      return `https://${host}`;
+    });
+
     // Create a new agent with a system prompt (you can add optional tools, too)
     const codeAgent = createAgent({
       name: "code-agent",
-      system: "You are an expert next.js developer. You write maintable and read able code. write simple next.js & react snippets",
-      model: gemini({ model: 'gemini-2.5-flash'}),
+      description: "an expert coding agent",
+      system:PROMPT,
+      model: gemini({
+         model:"gemini-2.5-flash"
+         }),
+
+      tools: [
+        createTool({
+          name: "terminal",
+          description: "Use the terminal to run commands",
+
+          parameters: z.object({
+            command: z.string(),
+          }),
+          
+          handler: async ({ command }, { step }) => {
+            return await step?.run("terminal", async () => {
+              const buffers = { stdout: "", stderr: "" };
+              try {
+                const sandbox = await getSandbox(sandboxId);
+                const result = await sandbox.commands.run(command, {
+                  stdin: false, // extra
+                  onStdout: (data: string) => {
+                    buffers.stdout += data;
+                  },
+
+                  onStderr: (data: string) => {
+                    buffers.stderr += data;
+                  },
+                });
+
+                return result.stdout;
+              } catch (error) {
+                console.error(
+                  `Command error: ${error} \n stdout: ${buffers.stdout} \n stderr: ${buffers.stderr}`
+                );
+                return `Command error: ${error} \n stdout: ${buffers.stdout} \n stderr: ${buffers.stderr}`;
+              }
+            });
+          },
+        }),
+
+       
+        createTool({
+          name: `createOrUpdateFiles`,
+          description: "create or update files in sandbox",
+          parameters: z.object({
+            files: z.array(
+              z.object({
+                path: z.string(),
+                content: z.string(),
+              })
+            ),
+          }),
+          handler: async ({ files }, { step, network }) => {
+            const newFile = await step?.run("createOrUpdateFiles", async () => {
+              try {
+                const updatedFiles = network.state.data.files || {};
+                const sandbox = await getSandbox(sandboxId);
+                for (const file of files) {
+                  await sandbox.files.write(file.path, file.content);
+                  updatedFiles[file.path] = file.content;
+                }
+                return updatedFiles;
+              } catch (error) {
+                return "Error: " + error;
+              }
+            });
+
+            if (typeof newFile === "object") {
+              network.state.data.files = newFile;
+            }
+          },
+        }),
+
+        createTool({
+          name: "readFiles",
+          description: "Read files from sandbox",
+          parameters: z.object({
+            files: z.array(z.string()),
+          }),
+          handler: async ({ files }, { step }) => {
+            return await step?.run("readFiles", async () => {
+              try {
+                const sandbox = await getSandbox(sandboxId);
+                const contents: { path: string; content: string }[] = [];
+                for (const file of files) {
+                  const content = await sandbox.files.read(file);
+                  contents.push({ path: file, content });
+                }
+                return JSON.stringify(contents);
+              } catch (err) {
+                return "Error: " + err;
+              }
+            });
+          },
+        }),
+      ],
+      lifecycle: {
+        onResponse: async ({ result, network }) => {
+          const lastAssistantMessageText = lastAssistantTextMessageContent(result);
+
+          if (lastAssistantMessageText && network) {
+            if (lastAssistantMessageText.includes("<task_summary>")) {
+              network.state.data.summary = lastAssistantMessageText;
+            }
+          }
+
+          return result;
+        },
+      },
     });
 
-    const { output } = await codeAgent.run(
-    `write the folloing snippet : ${event.data.value}`,
-    )
+    const network = createNetwork({
+      name: "coding-agent-network",
+      agents: [codeAgent],
+      maxIter: 15,
+      router: async ({ network }) => {
+        const summary = network.state.data.summary;
+        if (summary) {
+          return;
+        }
 
-    const sandboxUrl = await step.run("get-sandbox-url" , async () =>{
-      const sandbox = await getSandbox(sandboxId)
-      const host = sandbox.getHost(3000)
-      return `https://${host}`;
-    })
+        return codeAgent;
+      },
+    });
 
-    return { output , sandboxUrl}; // email tha
- },
+    const result = await network.run(event.data.value);
+
+    
+
+    return {
+      url: sandboxUrl,
+      title: "Fragment",
+      files: result.state.data.files,
+      summary: result.state.data.summary,
+    };
+  }
 );
