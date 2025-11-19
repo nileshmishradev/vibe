@@ -25,7 +25,7 @@ const Page = async ({ params }: Props) => {
     <div>
        <HydrationBoundary state={dehydrate(queryClient)}>
                 <Suspense fallback={<div>Loading...</div>}>
-                    <ProjectView projectId={projectId} />
+                    <ProjectView projectId={projectId} />  {/* sending the projectId as a props to projecview file*/}
                 </Suspense>
         </HydrationBoundary>
     </div>
