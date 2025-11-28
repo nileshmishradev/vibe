@@ -15,7 +15,11 @@ interface Props {
 };
 
 export const MessagesContainer = ({ projectId ,activeFragment,setActiveFragment}: Props) => {
+
+  // useref is used
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastAssistantMessageIdRef = useRef<string| null>(null);
+
   const trpc = useTRPC();
   const { data: messages } = useSuspenseQuery(trpc.messages.getMany.queryOptions({
     projectId: projectId,
@@ -24,16 +28,16 @@ export const MessagesContainer = ({ projectId ,activeFragment,setActiveFragment}
         refetchInterval: 5000,
     }))
 
-  // Todo : these is causing problems (it select the last assistant message ka fragment)
-  // useEffect(() => {
-  //   const lastAssistantMessagewithFragment = messages.findLast(
-  //     (message) => message.role === "ASSISTANT" && !!message.fragment, //note
-  //   );
+    // selecting fragment
+  useEffect(() => {
+     const lastAssistantMessage = messages.findLast((message) => message.role === "ASSISTANT");
 
-  //   if (lastAssistantMessagewithFragment) {
-  //        setActiveFragment(lastAssistantMessagewithFragment.fragment)
-  //   }
-  // }, [messages,setActiveFragment]); // note useeffect will work when change
+        if(lastAssistantMessage?.fragment && lastAssistantMessage.id !== lastAssistantMessageIdRef.current){
+            setActiveFragment(lastAssistantMessage.fragment)
+            lastAssistantMessageIdRef.current = lastAssistantMessage.id
+        }
+    
+  }, [messages,setActiveFragment]); // note useeffect will work when change
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView();
