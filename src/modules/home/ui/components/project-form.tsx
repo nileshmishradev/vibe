@@ -13,6 +13,7 @@ import { Form, FormField } from "@/components/ui/form"
 import { ArrowUpIcon, Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { PROJECT_TEMPLATES } from "../../constant"
+import { useClerk } from "@clerk/nextjs"
 
 
 const formSchema = z.object({
@@ -27,7 +28,7 @@ export const ProjectForm  = () =>{
     const router = useRouter();
     const trpc = useTRPC();
     const queryClient = useQueryClient();
-
+      const clerk = useClerk()
 
     // uses useForm hook
     const form = useForm<z.infer<typeof formSchema>>({
@@ -47,6 +48,11 @@ export const ProjectForm  = () =>{
 
         },
         onError: (error) => {
+
+            if(error.data?.code === "UNAUTHORIZED") {
+                clerk.openSignIn();
+            }
+
           toast.error(error.message);
         }
 
