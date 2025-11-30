@@ -1,12 +1,13 @@
 import z from "zod";
-import { baseProcedure, createTRPCRouter } from "@/trpc/init";
+import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { prisma } from "@/lib/db";
 import { inngest } from "@/inngest/client";
+import { TRPCError } from "@trpc/server";
 
 export const messagesRouter = createTRPCRouter({
 
 
-    create: baseProcedure
+    create: protectedProcedure
         .input(
             z.object({
                 value: z.string()
@@ -17,10 +18,26 @@ export const messagesRouter = createTRPCRouter({
                 
             }),
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input ,ctx }) => {
+
+            const existingProjects = await prisma.project.findUnique({
+                where:{
+                    id: input.projectId,
+                    userId: ctx.auth.userId
+                }
+            })
+
+            if(!existingProjects){
+                throw new TRPCError
+                ({
+                    code: "NOT_FOUND",
+                    message: "Project not found"
+                })
+            }
+
             const createdMessage = await prisma.message.create({
                 data: {
-                    projectId:input.projectId,
+                    projectId:existingProjects.id,
                     content: input.value,
                     role: "USER",
                     type: "RESULT"
@@ -39,17 +56,20 @@ export const messagesRouter = createTRPCRouter({
 
         }),
 
-        getMany: baseProcedure
+        getMany: protectedProcedure
          .input(
             z.object({
                 projectId: z.string()
                     .min(1,{message: "Project id is required"}),
             }),
         )
-        .query(async ({input}) =>{
+        .query(async ({input ,ctx}) =>{
             const messages = await prisma.message.findMany({
                 where : {
-                    projectId : input.projectId
+                    projectId : input.projectId,
+                    project:{
+                        userId:ctx.auth.userId,
+                    }
                 },
                 include : {
                     fragment:true
