@@ -14,6 +14,24 @@ interface Props {
 export function Usage({ points, msBeforeNext }: Props) {
     const {has} = useAuth();
     const hasProAccess  = has?.({ plan : "pro" });
+
+   const resetTime = useMemo(() => {
+    try {
+        return formatDuration(
+            intervalToDuration({
+                start: new Date(),
+                end: new Date(Date.now() + msBeforeNext),
+            }),
+            { format: ["months", "days", "hours"] }
+        );
+    } catch (error) {
+        console.error("ERROR formatting duration", error);
+        return "";
+    }
+}, [msBeforeNext]);
+
+
+
     return (
         <div className="rounded-t-xl bg-background border border-b-0 p-2.5">
             <div className="flex items-center gap-x-2">
@@ -22,15 +40,7 @@ export function Usage({ points, msBeforeNext }: Props) {
                         {points} {hasProAccess ? "" : "Free"} credits remaining
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Resets in{" "}
-                        {formatDuration(
-                            intervalToDuration({
-                                start: new Date(),
-                                end: new Date(Date.now() + msBeforeNext),
-                            }),
-                            { format: ["months", "days", "hours"] }
-                        )}
-
+                        Resets in{" "} {resetTime}
                     </p>
                 </div>
                 {!hasProAccess && (

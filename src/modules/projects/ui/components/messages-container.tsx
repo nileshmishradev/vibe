@@ -25,7 +25,7 @@ export const MessagesContainer = ({ projectId ,activeFragment,setActiveFragment}
     projectId: projectId,
   }, {
         // TODO: Temperary live Message
-        refetchInterval: 5000,
+        refetchInterval: 2000,
     }))
 
     // selecting fragment

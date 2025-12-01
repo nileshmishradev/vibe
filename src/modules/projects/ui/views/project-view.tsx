@@ -19,6 +19,7 @@ import { CodeView } from "@/components/code-view";
 import { FileExplorer } from "@/components/file-explorer";
 import UserControl from "@/components/user-control";
 import { useAuth } from "@clerk/nextjs";
+import { ErrorBoundary } from "react-error-boundary";
 
 // props se projectid aa raha hai
 interface Props {
@@ -41,11 +42,13 @@ export const ProjectView = ({ projectId }: Props) => {
           minSize={20}
           className="flex flex-col min-h-0"
         >
+          <ErrorBoundary fallback={<p>Project Header Error</p>}>
           <Suspense fallback={<div>Loading...</div>}>
             <ProjectHeader projectId={projectId} />
           </Suspense>
-
-          <Suspense fallback={<div>Loading Message...</div>}>
+          </ErrorBoundary>
+          <ErrorBoundary fallback={<p>Project Message Error </p>}>
+            <Suspense fallback={<div>Loading Message...</div>}>
             <MessagesContainer
               projectId={projectId}
               activeFragment={activeFragment}
@@ -53,6 +56,9 @@ export const ProjectView = ({ projectId }: Props) => {
             />
           </Suspense>
 
+
+          </ErrorBoundary>
+          
         </ResizablePanel>
         <ResizableHandle className="hover:bg-primary transition-colors" />
         <ResizablePanel
