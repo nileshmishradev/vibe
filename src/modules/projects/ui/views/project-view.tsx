@@ -18,6 +18,7 @@ import Link from "next/link";
 import { CodeView } from "@/components/code-view";
 import { FileExplorer } from "@/components/file-explorer";
 import UserControl from "@/components/user-control";
+import { useAuth } from "@clerk/nextjs";
 
 // props se projectid aa raha hai
 interface Props {
@@ -25,6 +26,9 @@ interface Props {
 };
 
 export const ProjectView = ({ projectId }: Props) => {
+
+  const { has } = useAuth();
+  const hasProAccess = has?.({ plan: "pro" });
 
   const [activeFragment, setActiveFragment] = useState<Fragment | null>(null);
   const [tabState, setTabState] = useState<"preview" | "code">("preview");
@@ -50,7 +54,7 @@ export const ProjectView = ({ projectId }: Props) => {
           </Suspense>
 
         </ResizablePanel>
-        <ResizableHandle  className="hover:bg-primary transition-colors"  />
+        <ResizableHandle className="hover:bg-primary transition-colors" />
         <ResizablePanel
           defaultSize={65}
           minSize={50}
@@ -72,20 +76,24 @@ export const ProjectView = ({ projectId }: Props) => {
                 </TabsTrigger>
               </TabsList>
               <div className="ml-auto flex items-center gap-x-2">
-                <Button asChild size="sm" variant="tertiary">
-                  <Link href="/pricing">
-                    <CrownIcon /> Upgrade
-                  </Link>
-                </Button>
-                <UserControl/>
+                {!hasProAccess && (
+                  <Button asChild size="sm" variant="tertiary">
+                    <Link href="/pricing">
+                      <CrownIcon /> Upgrade
+                    </Link>
+                  </Button>
+
+                )}
+
+                <UserControl />
               </div>
             </div>
             <TabsContent value="preview">
               {!!activeFragment && <FragmentWeb data={activeFragment} />}
             </TabsContent>
             <TabsContent value="code" className="min-h-0">
-              {!!activeFragment?.files &&(
-                 <FileExplorer   files={activeFragment?.files as {[path:string]:string}} />
+              {!!activeFragment?.files && (
+                <FileExplorer files={activeFragment?.files as { [path: string]: string }} />
               )}
             </TabsContent>
           </Tabs>

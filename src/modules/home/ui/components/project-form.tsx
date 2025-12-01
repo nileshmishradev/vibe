@@ -44,13 +44,18 @@ export const ProjectForm  = () =>{
                 trpc.projects.getMany.queryOptions()
             );
              router.push(`/projects/${data.id}`)
-            // todo : invalidate usage status
+            // invalidate credit usage status
+              queryClient.invalidateQueries(trpc.usage.status.queryOptions());
 
         },
         onError: (error) => {
 
             if(error.data?.code === "UNAUTHORIZED") {
                 clerk.openSignIn();
+            }
+
+            if(error.data?.code === "TOO_MANY_REQUESTS") {
+                router.push("/pricing")
             }
 
           toast.error(error.message);
