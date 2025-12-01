@@ -2,6 +2,7 @@ import { ProjectView } from "@/modules/projects/ui/views/project-view";
 import { getQueryClient, trpc } from "@/trpc/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 interface Props {
   params: Promise<{
@@ -10,24 +11,26 @@ interface Props {
 }
 
 const Page = async ({ params }: Props) => {
-  const {projectId} = await params;
+  const { projectId } = await params;
   // server component so , prefetching
-    const queryClient = getQueryClient();
-    void queryClient.prefetchQuery(trpc.messages.getMany.queryOptions({
-        projectId, // giving projectid to getmany function of message
-    }))
+  const queryClient = getQueryClient();
+  void queryClient.prefetchQuery(trpc.messages.getMany.queryOptions({
+    projectId, // giving projectid to getmany function of message
+  }))
 
-    void queryClient.prefetchQuery(trpc.projects.getOne.queryOptions({
-        id: projectId, // passing projectid as id to getone function of projects
-    }))
+  void queryClient.prefetchQuery(trpc.projects.getOne.queryOptions({
+    id: projectId, // passing projectid as id to getone function of projects
+  }))
 
   return (
     <div>
-       <HydrationBoundary state={dehydrate(queryClient)}>
-                <Suspense fallback={<div>Loading...</div>}>
-                    <ProjectView projectId={projectId} />  {/* sending the projectId as a props to projecview file*/}
-                </Suspense>
-        </HydrationBoundary>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <ErrorBoundary fallback={<div>Something went wrong</div>}>
+          <Suspense fallback={<div>Loading...</div>}>
+            <ProjectView projectId={projectId} />  {/* sending the projectId as a props to projecview file*/}
+          </Suspense>
+        </ErrorBoundary>
+      </HydrationBoundary>
     </div>
   );
 };
