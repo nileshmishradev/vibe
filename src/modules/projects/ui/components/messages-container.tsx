@@ -16,7 +16,7 @@ interface Props {
 
 export const MessagesContainer = ({ projectId ,activeFragment,setActiveFragment}: Props) => {
 
-  // useref is used
+  // useref is used (to scroll)
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastAssistantMessageIdRef = useRef<string| null>(null);
 
