@@ -19,7 +19,7 @@ import { useClerk } from "@clerk/nextjs"
 const formSchema = z.object({
     value: z.string()
     .min(1,{message: "Message is required"})
-    .max(10000,{message: "Message is too long"})
+    .max(1000,{message: "Message is too long"})
 })
 
 
@@ -61,7 +61,6 @@ export const ProjectForm  = () =>{
           toast.error(error.message);
         }
 
-        //todo : redirected to pricing page if specific error 
 
       })
     );

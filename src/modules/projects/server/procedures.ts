@@ -50,7 +50,7 @@ export const projectsRouter = createTRPCRouter({
             z.object({
                 value: z.string()
                     .min(1, { message: "Message is required" })
-                    .max(10000, { message: "Value is too long" })
+                    .max(1000, { message: "Value is too long" })
             }),
         )
         .mutation(async ({ input, ctx }) => {

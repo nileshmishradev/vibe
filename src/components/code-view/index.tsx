@@ -1,5 +1,5 @@
 
-// these file is for giving language
+// these file is for giving language (.ts or any language)
 
 import Prism from "prismjs"
 import { useEffect } from "react"
